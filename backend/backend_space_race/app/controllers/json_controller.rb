@@ -1,8 +1,77 @@
-require 'mechanize'
-require 'uri'
-require 'net/http'
-require 'csv'
-require 'json'
+class JsonController < ApplicationController
+  require 'csv'
+  def swift
+    params[:startdate] = params[:startdate].split("-").reverse.join("-")
+    if (@version = NasaVersion.find("swift"+params[:startdate])) == nil || (DateTime.now - @version.date) > 3600
+      
+#      p Time.now - @version.date
+      data = DownloadData::Swift.download_data(params[:startdate])
+      @version = NasaVersion.new#(:version => "swift"+params[:startdate], :content => data, :date => Time.now)
+      @version._id = "swift"+params[:startdate]
+      @version.content = data
+      @version.date = Time.now
+      @version.save
+    end
+    render :json => @version.content
+  end
+
+  def integral
+    
+    if (@version = NasaVersion.find("integral"+params[:startdate]+params[:enddate])) == nil || (DateTime.now - @version.date) > 3600
+      
+#      p Time.now - @version.date
+      data = DownloadData::Integral.download_data(params[:startdate],params[:enddate])
+      @version = NasaVersion.new#(:version => "swift"+params[:startdate], :content => data, :date => Time.now)
+      @version._id = "integral"+params[:startdate]+params[:enddate]
+      @version.content = data
+      @version.date = Time.now
+      @version.save
+    end
+    render :json => @version.content
+
+
+#    data = DownloadData::Integral.download_data(params[:startdate],params[:enddate])
+ #   render :json => data
+  end
+
+  def nustar
+    if (@version = NasaVersion.find("nustar")) == nil || (DateTime.now - @version.date) > 3600
+      
+      #      p Time.now - @version.date
+      data = DownloadData::NuSTAR.download_data#(params[:startdate],params[:enddate])
+      @version = NasaVersion.new#(:version => "swift"+params[:startdate], :content => data, :date => Time.now)
+      @version._id = "nustar"#+params[:startdate]+params[:enddate]
+      @version.content = data
+      @version.date = Time.now
+      @version.save
+      
+    end
+    render :json => @version.content
+#    data = DownloadData::NuSTAR.download_data()
+#    render :json => data
+  end
+
+  def herschel
+        if (@version = NasaVersion.find("herschel"+params[:startdate])) == nil || (DateTime.now - @version.date) > 3600
+      
+      #      p Time.now - @version.date
+      data = DownloadData::Herschel.download_data(params[:startdate])#,params[:enddate])
+      @version = NasaVersion.new#(:version => "swift"+params[:startdate], :content => data, :date => Time.now)
+      @version._id = "herschel"+params[:startdate]#+params[:enddate]
+      @version.content = data
+      @version.date = Time.now
+      @version.save
+      
+    end
+    render :json => @version.content
+#
+ #   data = DownloadData::Herschel.download_data(params[:startdate])
+ #   render :json => data
+  end
+
+end
+
+
 #require 'sinatra'
 
 # DATA ORA
@@ -61,7 +130,7 @@ module DownloadData
           end
         end
       end
-
+      p objects
       JSON.pretty_generate(objects)
     end
   end
@@ -75,10 +144,12 @@ module DownloadData
     end
 
     def self.download_data(startdate,enddate)
+      puts "http://integral.esac.esa.int/isocweb/schedule.html?selectMode=date&action=schedule&startDate=#{startdate.split("-").reverse.join("-")}&endDate=#{enddate.split("-").reverse.join("-")}"
       
       mech = Mechanize.new{|agent| agent.user_agent_alias = "Mac Safari"}
       
-      data = mech.get("http://integral.esac.esa.int/isocweb/schedule.html?selectMode=date&action=schedule&startDate=#{startdate}&endDate=#{enddate}")
+      data = mech.get("http://integral.esac.esa.int/isocweb/schedule.html?selectMode=date&action=schedule&startDate=#{startdate.split("-").reverse.join("-")}&endDate=#{enddate.split("-").reverse.join("-")}")
+
       link = data.link_with(:text => "here").href
       uri = URI(@domain+link)
 
@@ -146,7 +217,7 @@ module DownloadData
 
     def self.download_data(startdate)
       data = []
-      CSV.parse( Net::HTTP.get(URI("http://herschel.esac.esa.int/logrepgen/observationlist.do?durationFrom=&odTo=&startTimeFrom#{startdate}T00%3A00%3A00Z&spgLabel=&d-49653-e=1&targetName=&odFrom=&obsId=&durationTo=&title=&qcFlags=&6578706f7274=1&startTimeTo=&isCalibration=false&proposalId=&itemsPerPage=50")).force_encoding('UTF-8')) do |row|
+      CSV.parse( Net::HTTP.get(URI("http://herschel.esac.esa.int/logrepgen/observationlist.do?durationFrom=&odTo=&startTimeFrom#{startdate}T00%3A00%3A00Z&spgLabel=&d-49653-e=1&targetName=&odFrom=&obsId=&durationTo=&title=&qcFlags=&6578706f7274=1&startTimeTo=&isCalibration=false&proposalId=&itemsPerPage=10")).force_encoding('UTF-8')) do |row|
         ra =  row[2]
         dec = row[3]
         startdate = row[7]
@@ -158,22 +229,3 @@ module DownloadData
     end
   end
 end
-
-if $0 == __FILE__
-#  data = DownloadData::Integral.download_data("2012-05-19","2012-06-20")
-  data = DownloadData::Swift.download_data("2013-04-20")
-  #  data = DownloadData::Herschel.download_data("2013-04-20")
-  data = DownloadData::NuSTAR.download_data()
-  puts data
-end
-
-=begin
-get '/' do
-
-  startdate = params[:start]
-  enddate = params[:end]
-  
-  DownloadData::Integral.download_data(startdate,enddate)
-  
-end
-=end
