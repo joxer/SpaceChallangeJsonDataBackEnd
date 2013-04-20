@@ -1,7 +1,11 @@
 class JsonController < ApplicationController
   require 'csv'
+  
+  before_filter :control_params
   def swift
+
     params[:startdate] = params[:startdate].split("-").reverse.join("-")
+    p params
     if (@version = NasaVersion.find("swift"+params[:startdate])) == nil || (DateTime.now - @version.date) > 3600
       
 #      p Time.now - @version.date
@@ -67,6 +71,15 @@ class JsonController < ApplicationController
 #
  #   data = DownloadData::Herschel.download_data(params[:startdate])
  #   render :json => data
+  end
+
+private
+  
+  def control_params
+    
+    if params[:startdate] == nil && params[:enddate] == nil
+      render :inline => "error"
+    end
   end
 
 end

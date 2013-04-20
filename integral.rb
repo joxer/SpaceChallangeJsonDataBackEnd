@@ -163,7 +163,7 @@ if $0 == __FILE__
 #  data = DownloadData::Integral.download_data("2012-05-19","2012-06-20")
   data = DownloadData::Swift.download_data("2013-04-20")
   #  data = DownloadData::Herschel.download_data("2013-04-20")
-  data = DownloadData::NuSTAR.download_data()
+#  data = DownloadData::NuSTAR.download_data()
   puts data
 end
 
